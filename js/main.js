@@ -29,28 +29,40 @@ const renderBoardCards = () => {
 };
 
 const renderBoardStaff = () => {
-  const staffContainer = document.getElementById('board-staff');
+  const staffContainer = document.getElementById('staff-board-content');
+  const staffHeader = document.getElementById('staff-board-header');
 
   if (activeBoardIdx == null || !boards[activeBoardIdx].staff.length) {
-    staffContainer.innerHTML = `<span>No active staff</span>`;
+    staffHeader.textContent = 'No active staff';
+    staffContainer.innerHTML = '';
   } else {
     const { staff } = boards[activeBoardIdx];
 
+    staffHeader.textContent = 'Active staff';
+
     staffContainer.innerHTML = staff
-      .map(p => `<div class="board-badge">John Doe</div>`)
+      .map(
+        ({ name, surname, department }) => `
+          <div class="board-badge">
+            <span>${name} ${surname}</span>
+            <span>${department}</span>
+          </div>
+        `
+      )
       .join('');
   }
 };
 
 const renderActiveBoard = () => {
-  const boardContainer = document.getElementById('board-wrapper');
+  const boardContainer = document.getElementById('main-board-content');
+  const boardHeader = document.getElementById('main-board-header');
   const boardActions = document.getElementById('board-actions');
 
   if (activeBoardIdx == null) {
-    boardContainer.innerHTML = `<span>No board selected</span>`;
+    boardHeader.textContent = 'No board selected';
     boardActions.classList.add('hidden');
   } else {
-    boardContainer.innerHTML = `<span>${boards[activeBoardIdx].name}</span>`;
+    boardHeader.textContent = `${boards[activeBoardIdx].name}`;
     boardActions.classList.remove('hidden');
   }
 
@@ -75,15 +87,29 @@ const addPersonHandler = () => {
   const departmentStaff = people.filter(
     p => p.department == boards[activeBoardIdx].name
   );
-  const max = departmentStaff.length;
+  const activeStaff = boards[activeBoardIdx].activeIds;
 
-  const person = departmentStaff[Math.floor(Math.random() * max)];
+  let person;
+
+  for (let i = 0; i < departmentStaff.length; i++) {
+    if (!activeStaff.includes(departmentStaff[i].id)) {
+      person = departmentStaff[i];
+      activeStaff.push(departmentStaff[i].id);
+      break;
+    }
+  }
+
+  if (!person) return;
 
   const boardIdx = boards.findIndex(b => b.name == boards[activeBoardIdx].name);
 
   boards = [
     ...boards.slice(0, boardIdx),
-    { ...boards[boardIdx], staff: [...boards[boardIdx].staff, person] },
+    {
+      ...boards[boardIdx],
+      staff: [...boards[boardIdx].staff, person],
+      activeStaff
+    },
     ...boards.slice(boardIdx + 1)
   ];
 
