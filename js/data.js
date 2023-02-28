@@ -1,6 +1,56 @@
 let boards = [
-  { name: 'stow', staff: [], support: 'void', activeIds: [] },
-  { name: 'dock', staff: [], support: 'stow', activeIds: [] }
+  {
+    name: 'stow',
+    support: 'void',
+    activeIds: [],
+    staffMap: {},
+    cells: [
+      {
+        name: 'main',
+        classification: 'area',
+        staff: [],
+        elSelector: 'main-board-content'
+      },
+      {
+        name: 'void',
+        classification: 'support',
+        staff: [],
+        elSelector: 'support-board-content'
+      },
+      {
+        name: 'active',
+        classification: 'active',
+        staff: [],
+        elSelector: 'staff-board-content'
+      }
+    ]
+  },
+  {
+    name: 'dock',
+    support: 'stow',
+    activeIds: [],
+    staffMap: {},
+    cells: [
+      {
+        name: 'main',
+        classification: 'area',
+        staff: [],
+        elSelector: 'main-board-content'
+      },
+      {
+        name: 'stow',
+        classification: 'support',
+        staff: [],
+        elSelector: 'support-board-content'
+      },
+      {
+        name: 'active',
+        classification: 'active',
+        staff: [],
+        elSelector: 'staff-board-content'
+      }
+    ]
+  }
 ];
 
 let activeBoardIdx = null;
