@@ -1,0 +1,81 @@
+:root {
+  --space-default: 1.1rem;
+  --radius-default: 4px;
+  --color-dark: #141313;
+  --color-gray: #d4d4d4;
+  --time-default: 0.2s;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  color: var(--color-dark);
+}
+
+/* content containers */
+.content {
+  padding: var(--space-default);
+}
+
+@media (min-width: 1400px) {
+  .content {
+    max-width: 70%;
+    margin: 0 auto;
+  }
+}
+
+.content > .headline {
+  text-transform: capitalize;
+  margin-bottom: var(--space-default);
+}
+
+.box {
+  padding: var(--space-default);
+  border: 1px solid var(--color-gray);
+  border-radius: var(--radius-default);
+}
+
+/* boards grid */
+.boards-wrapper {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  grid-gap: var(--space-default);
+}
+
+.board-card {
+  transition: all var(--time-default);
+}
+
+.board-card:hover {
+  border-color: var(--color-dark);
+  cursor: pointer;
+}
+
+.board-card.active {
+  border-color: var(--color-dark);
+}
+
+.board-card > h3 {
+  text-transform: capitalize;
+}
+
+/* active board wrapper */
+.active-board-wrapper {
+  display: flex;
+  gap: var(--space-default);
+}
+
+/* board */
+.board-wrapper {
+  flex: 3;
+  min-height: 300px;
+}
+
+.board-actions {
+  flex: 1;
+}
