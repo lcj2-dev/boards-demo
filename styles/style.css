@@ -41,7 +41,7 @@ section.content {
   }
 }
 
-section.content > .headline {
+h2.headline {
   text-transform: capitalize;
   margin-bottom: var(--space-default);
 }
@@ -57,8 +57,14 @@ section.content > .headline {
   text-transform: capitalize;
 }
 
-.hidden {
-  display: none;
+.box > .content {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.box:hover {
+  cursor: pointer;
 }
 
 /* buttons */
@@ -136,12 +142,6 @@ section.content > .headline {
   flex: 1;
 }
 
-.board-staff > .content {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
 .board-actions {
   margin-bottom: var(--space-default);
 }
@@ -152,8 +152,13 @@ section.content > .headline {
   padding: 10px;
   display: flex;
   flex-direction: column;
+  user-select: none;
 }
 
 .board-badge:hover {
   cursor: pointer;
+}
+
+.board-badge.active {
+  border-color: var(--color-cyan);
 }

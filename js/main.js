@@ -42,31 +42,78 @@ const renderBoardStaff = () => {
 
     staffContainer.innerHTML = staff
       .map(
-        ({ name, surname, department }) => `
-          <div class="board-badge">
+        ({ name, surname, department, id }) => `
+          <div class="board-badge" data-id="${id}">
             <span>${name} ${surname}</span>
             <span>${department}</span>
           </div>
         `
       )
       .join('');
+
+    // listen for badge events
+    for (let badge of staffContainer.querySelectorAll('.board-badge')) {
+      badge.addEventListener('click', ({ currentTarget }) => {
+        activePersonId = parseInt(currentTarget.dataset.id);
+        currentTarget.classList.add('active');
+      });
+    }
   }
 };
 
 const renderActiveBoard = () => {
-  const boardContainer = document.getElementById('main-board-content');
-  const boardHeader = document.getElementById('main-board-header');
-  const boardActions = document.getElementById('board-actions');
+  const boardWrapper = document.getElementById('active-board-wrapper');
+  // const boardContainer = document.getElementById('main-board-content');
 
   if (activeBoardIdx == null) {
-    boardHeader.textContent = 'No board selected';
-    boardActions.classList.add('hidden');
+    boardWrapper.innerHTML = '';
   } else {
-    boardHeader.textContent = `${boards[activeBoardIdx].name}`;
-    boardActions.classList.remove('hidden');
-  }
+    const { name, support } = boards[activeBoardIdx];
 
-  renderBoardStaff();
+    // render boards
+    boardWrapper.innerHTML = `
+      <h2 class="headline">Active Board</h2>
+      <div class="board-actions box">
+        <button class="btn btn-danger" id="close-board">Close board</button>
+        <button class="btn btn-success" id="add-person">Add person</button>
+      </div>
+      <div class="active-board-wrapper">
+        <div class="board-main box">
+          <h4>${name}</h4>
+          <div id="main-board-content" data-cell-slug="${name}-main"></div>
+        </div>
+        <div class="board-support box">
+          <h4>Support to ${support}</h4>
+          <div class="content" id="support-board-content" data-cell-slug="${support}-support"></div>
+        </div>
+        <div class="board-staff box">
+          <h4 id="staff-board-header">No Active staff</h4>
+          <div class="content" id="staff-board-content" data-cell-slug="${name}-staff"></div>
+        </div>
+      </div>
+    `;
+
+    // listen for board events
+    document
+      .getElementById('close-board')
+      .addEventListener('click', closeBoardHandler);
+
+    document
+      .getElementById('add-person')
+      .addEventListener('click', addPersonHandler);
+
+    // render active staff
+    renderBoardStaff();
+
+    // listen for cell events
+    for (let cell of document.querySelectorAll('div[data-cell-slug]')) {
+      cell.parentElement.addEventListener('click', e => {
+        if (activePersonId) {
+          console.log(e.currentTarget);
+        }
+      });
+    }
+  }
 };
 
 const selectBoardHandler = ({ currentTarget }) => {
@@ -119,16 +166,5 @@ const addPersonHandler = () => {
 };
 
 (() => {
-  // render components
   renderBoardCards();
-  renderActiveBoard();
-
-  // listen for board events
-  document
-    .getElementById('close-board')
-    .addEventListener('click', closeBoardHandler);
-
-  document
-    .getElementById('add-person')
-    .addEventListener('click', addPersonHandler);
 })();

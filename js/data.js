@@ -1,9 +1,10 @@
 let boards = [
-  { name: 'stow', staff: [], support: 'stow', activeIds: [] },
-  { name: 'dock', staff: [], support: 'void', activeIds: [] }
+  { name: 'stow', staff: [], support: 'void', activeIds: [] },
+  { name: 'dock', staff: [], support: 'stow', activeIds: [] }
 ];
 
 let activeBoardIdx = null;
+let activePersonId = null;
 
 const people = [
   { id: 1, name: 'Nichole', surname: 'Cotton', department: 'stow' },
