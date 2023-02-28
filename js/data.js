@@ -1,3 +1,24 @@
-let boards = [{ name: 'stow' }, { name: 'dock' }];
+let boards = [
+  { name: 'stow', staff: [] },
+  { name: 'dock', staff: [] }
+];
 
-let activeBoard = null;
+let activeBoardIdx = null;
+
+const people = [
+  {
+    name: 'John',
+    surname: 'Doe',
+    department: 'stow'
+  },
+  {
+    name: 'John',
+    surname: 'Doe',
+    department: 'stow'
+  },
+  {
+    name: 'John',
+    surname: 'Doe',
+    department: 'dock'
+  }
+];

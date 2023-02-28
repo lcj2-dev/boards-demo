@@ -1,9 +1,21 @@
 :root {
   --space-default: 1.1rem;
   --radius-default: 4px;
-  --color-dark: #141313;
-  --color-gray: #d4d4d4;
   --time-default: 0.2s;
+
+  --color-dark: rgb(20, 19, 19);
+  --color-light: rgb(255, 255, 255);
+  --color-gray: rgb(212, 212, 212);
+  --color-red: rgb(239, 68, 68);
+  --color-orange: rgb(249, 115, 22);
+  --color-yellow: rgb(245, 158, 11);
+  --color-lime: rgb(132, 204, 22);
+  --color-green: rgb(34, 197, 94);
+  --color-cyan: rgb(20, 184, 166);
+  --color-blue: rgb(14, 165, 233);
+  --color-violet: rgb(139, 92, 246);
+  --color-pink: rgb(217, 70, 239);
+  --color-rose: rgb(244, 63, 94);
 }
 
 * {
@@ -38,6 +50,41 @@ body {
   padding: var(--space-default);
   border: 1px solid var(--color-gray);
   border-radius: var(--radius-default);
+}
+
+.hidden {
+  display: none;
+}
+
+/* buttons */
+.btn {
+  padding: 10px 50px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-default);
+  background-color: transparent;
+  transition: all var(--time-default);
+}
+
+.btn:hover {
+  cursor: pointer;
+}
+
+.btn-danger {
+  border-color: var(--color-red);
+}
+
+.btn-danger:hover {
+  background-color: var(--color-red);
+  color: var(--color-light);
+}
+
+.btn-success {
+  border-color: var(--color-green);
+}
+
+.btn-success:hover {
+  background-color: var(--color-green);
+  color: var(--color-light);
 }
 
 /* boards grid */
@@ -76,6 +123,19 @@ body {
   min-height: 300px;
 }
 
-.board-actions {
+.board-staff {
   flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.board-actions {
+  margin-bottom: var(--space-default);
+}
+
+.board-badge {
+  border: 1px solid var(--color-gray);
+  border-radius: var(--radius-default);
+  padding: 10px;
 }
