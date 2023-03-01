@@ -29,33 +29,34 @@ const renderBoardCards = () => {
 };
 
 const renderBoardStaff = () => {
-  for (let c of boards[activeBoardIdx].cells) {
-    const { staff, elSelector } = c;
-    const container = document.getElementById(elSelector);
+  if (activeBoardIdx != null) {
+    for (let c of boards[activeBoardIdx].cells) {
+      const { staff, elSelector } = c;
+      const container = document.getElementById(elSelector);
 
-    container.innerHTML = staff
-      .map(
-        ({ name, surname, department, id }) => `
-        <div class="board-badge ${
-          activePersonId == id && 'active'
-        }" data-id="${id}">
-          <span>${name} ${surname}</span>
-          <span>${department}</span>
-        </div>
-      `
-      )
-      .join('');
-  }
+      container.innerHTML = staff
+        .map(
+          ({ name, surname, department, id }) => `
+          <div class="board-badge ${
+            activePersonId == id && 'active'
+          }" data-id="${id}">
+            <span>${name} ${surname}</span>
+            <span>${department}</span>
+          </div>
+        `
+        )
+        .join('');
+    }
 
-  // listen for badge events
-  for (let badge of document.querySelectorAll('.board-badge')) {
-    badge.addEventListener('click', selectPersonHandler);
+    // listen for badge events
+    for (let badge of document.querySelectorAll('.board-badge')) {
+      badge.addEventListener('click', selectPersonHandler);
+    }
   }
 };
 
 const renderActiveBoard = () => {
   const boardWrapper = document.getElementById('active-board-wrapper');
-  // const boardContainer = document.getElementById('main-board-content');
 
   activePersonId = null;
 
@@ -102,7 +103,7 @@ const renderActiveBoard = () => {
     // listen for cell events
     for (let cell of document.querySelectorAll('div[data-cell-slug]')) {
       cell.parentElement.addEventListener('click', e =>
-        moveEventHandler(e, cell)
+        movePersonBoardHandler(e, cell)
       );
     }
   }
@@ -124,7 +125,7 @@ const closeBoardHandler = () => {
 
 const addPerson = (department, personId) => {
   const boardIdx = boards.findIndex(({ name }) => name == department);
-  const activeStaff = boards[boardIdx].activeIds;
+  let activeStaff = boards[boardIdx].activeIds;
 
   if (!activeStaff.includes(personId)) {
     const person = people.find(({ id }) => id == personId);
@@ -132,7 +133,7 @@ const addPerson = (department, personId) => {
     if (person) {
       const cellIdx = boards[boardIdx].cells.findIndex(c => c.name == 'active');
 
-      activeStaff.push(personId);
+      activeStaff = [...activeStaff, personId];
 
       const staffMap = {
         ...boards[boardIdx].staffMap
@@ -154,7 +155,7 @@ const addPerson = (department, personId) => {
             },
             ...boards[boardIdx].cells.slice(cellIdx + 1)
           ],
-          activeStaff,
+          activeIds: activeStaff,
           staffMap
         },
         ...boards.slice(boardIdx + 1)
@@ -185,8 +186,6 @@ const addPersonBoardHandler = () => {
     return;
   }
 
-  // activeBoardIdx = boardIdx;
-
   if (socket && socket.readyState == WebSocket.OPEN) {
     const eventObj = {
       type: 'personAdd',
@@ -207,90 +206,98 @@ const selectPersonHandler = ({ currentTarget }) => {
   currentTarget.classList.add('active');
 };
 
-const moveEventHandler = (event, cell) => {
+const movePerson = (moveFrom, moveTo, personId) => {
+  const [sourceCellDepartment, sourceCellClassification, sourceCellName] =
+    moveFrom.split('-');
+
+  const [targetCellDepartment, targetCellClassification, targetCellName] =
+    moveTo.split('-');
+
+  const boardIdx = boards.findIndex(({ name }) => name == sourceCellDepartment);
+
+  const staffMap = {
+    ...boards[boardIdx].staffMap
+  };
+
+  const oldCellIdx = boards[boardIdx].cells.findIndex(
+    ({ name, classification }) =>
+      name == sourceCellName && classification == sourceCellClassification
+  );
+
+  const newCellIdx = boards[boardIdx].cells.findIndex(
+    ({ name, classification }) =>
+      name == targetCellName && classification == targetCellClassification
+  );
+
+  const person = people.find(({ id }) => id == personId);
+
+  const cells = [...boards[boardIdx].cells];
+
+  cells[oldCellIdx].staff = cells[oldCellIdx].staff.filter(
+    ({ id }) => id != personId
+  );
+  cells[newCellIdx].staff = [...cells[newCellIdx].staff, person];
+
+  staffMap[`id${personId}`] = moveTo;
+
+  boards = [
+    ...boards.slice(0, boardIdx),
+    {
+      ...boards[boardIdx],
+      cells,
+      staffMap
+    },
+    ...boards.slice(boardIdx + 1)
+  ];
+
+  renderActiveBoard();
+};
+
+const movePersonBoardHandler = (event, cell) => {
   if (activePersonId) {
+    const tmpPersonId = activePersonId;
+
     const { cellSlug } = cell.dataset;
-    const { support } = boards[activeBoardIdx];
 
     const currentPersonLocation =
       boards[activeBoardIdx].staffMap[`id${activePersonId}`];
 
-    const [sourceCellDepartment, sourceCellClassification, sourceCellName] =
-      currentPersonLocation.split('-');
-
-    const [targetCellDepartment, targetCellClassification, targetCellName] =
-      cellSlug.split('-');
-
-    const isInternal = targetCellClassification != 'support';
     const sameCell = cellSlug == currentPersonLocation;
 
     if (!sameCell) {
-      const staffMap = {
-        ...boards[activeBoardIdx].staffMap
-      };
+      movePerson(currentPersonLocation, cellSlug, activePersonId);
 
-      const oldCellIdx = boards[activeBoardIdx].cells.findIndex(
-        ({ name, classification }) =>
-          name == sourceCellName && classification == sourceCellClassification
-      );
+      if (socket && socket.readyState == WebSocket.OPEN) {
+        const eventObj = {
+          type: 'personMove',
+          source: currentPersonLocation,
+          target: cellSlug,
+          personId: tmpPersonId
+        };
 
-      const newCellIdx = boards[activeBoardIdx].cells.findIndex(
-        ({ name, classification }) =>
-          name == targetCellName && classification == targetCellClassification
-      );
-
-      const person = people.find(({ id }) => id == activePersonId);
-
-      const cells = [...boards[activeBoardIdx].cells];
-
-      cells[oldCellIdx].staff = cells[oldCellIdx].staff.filter(
-        ({ id }) => id != activePersonId
-      );
-      cells[newCellIdx].staff.push(person);
-
-      staffMap[`id${activePersonId}`] = cellSlug;
-
-      boards = [
-        ...boards.slice(0, activeBoardIdx),
-        {
-          ...boards[activeBoardIdx],
-          cells,
-          staffMap
-        },
-        ...boards.slice(activeBoardIdx + 1)
-      ];
+        socket.send(JSON.stringify(eventObj));
+      }
 
       activePersonId = null;
-
-      renderActiveBoard();
-
-      // if (socket && socket.readyState == WebSocket.OPEN) {
-      //   const eventObj = {
-      //     type: 'personMove',
-      //     source: currentPersonLocation,
-      //     target: cellSlug,
-      //     isInternal
-      //   };
-
-      //   console.log(eventObj);
-
-      //   socket.send('data');
-      // }
     }
   }
 };
 
 const delegateRelayEvent = e => {
   switch (e.type) {
-    case 'personAdd':
+    case 'personAdd': {
       const { personId, target } = e;
       const departmentName = target.split('-')[0];
       addPerson(departmentName, personId);
 
       break;
-    case 'personMove':
-      console.log(e);
+    }
+    case 'personMove': {
+      const { personId, source, target } = e;
+      movePerson(source, target, personId);
+
       break;
+    }
   }
 };
 
