@@ -168,3 +168,7 @@ h2.headline {
 .board-badge.active {
   border-color: var(--color-cyan);
 }
+
+.board-badge > .department {
+  font-weight: bold;
+}

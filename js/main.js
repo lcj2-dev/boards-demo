@@ -28,6 +28,17 @@ const renderBoardCards = () => {
   }
 };
 
+const parseBadgeColor = department => {
+  switch (department) {
+    case 'stow':
+      return 'var(--color-green)';
+    case 'dock':
+      return 'var(--color-rose)';
+    default:
+      return 'var(--color-dark)';
+  }
+};
+
 const renderBoardStaff = () => {
   if (activeBoardIdx != null) {
     for (let c of boards[activeBoardIdx].cells) {
@@ -41,7 +52,9 @@ const renderBoardStaff = () => {
             activePersonId == id && 'active'
           }" data-id="${id}">
             <span>${name} ${surname}</span>
-            <span>${department}</span>
+            <span class="department" style="color: ${parseBadgeColor(
+              department
+            )}">${department}</span>
           </div>
         `
         )
@@ -123,53 +136,52 @@ const closeBoardHandler = () => {
   renderActiveBoard();
 };
 
-const addPerson = (department, personId) => {
-  const boardIdx = boards.findIndex(({ name }) => name == department);
+const addPerson = (addTo, personId) => {
+  const targetCellDepartment = addTo.split('-')[0];
+
+  const boardIdx = boards.findIndex(({ name }) => name == targetCellDepartment);
+
   let activeStaff = boards[boardIdx].activeIds;
 
-  if (!activeStaff.includes(personId)) {
-    const person = people.find(({ id }) => id == personId);
+  const person = people.find(({ id }) => id == personId);
 
-    if (person) {
-      const cellIdx = boards[boardIdx].cells.findIndex(c => c.name == 'active');
+  if (person) {
+    const cellIdx = boards[boardIdx].cells.findIndex(c => c.name == 'active');
 
-      activeStaff = [...activeStaff, personId];
+    const staffMap = {
+      ...boards[boardIdx].staffMap
+    };
 
-      const staffMap = {
-        ...boards[boardIdx].staffMap
-      };
+    activeStaff = [...activeStaff, person.id];
 
-      const cellSlug = `${department}-active-active`;
+    const cellSlug = `${targetCellDepartment}-active-active`;
 
-      staffMap[`id${personId}`] = cellSlug;
+    staffMap[`id${personId}`] = cellSlug;
 
-      boards = [
-        ...boards.slice(0, boardIdx),
-        {
-          ...boards[boardIdx],
-          cells: [
-            ...boards[boardIdx].cells.slice(0, cellIdx),
-            {
-              ...boards[boardIdx].cells[cellIdx],
-              staff: [...boards[boardIdx].cells[cellIdx].staff, person]
-            },
-            ...boards[boardIdx].cells.slice(cellIdx + 1)
-          ],
-          activeIds: activeStaff,
-          staffMap
-        },
-        ...boards.slice(boardIdx + 1)
-      ];
-
-      renderBoardStaff();
-    }
+    boards = [
+      ...boards.slice(0, boardIdx),
+      {
+        ...boards[boardIdx],
+        cells: [
+          ...boards[boardIdx].cells.slice(0, cellIdx),
+          {
+            ...boards[boardIdx].cells[cellIdx],
+            staff: [...boards[boardIdx].cells[cellIdx].staff, person]
+          },
+          ...boards[boardIdx].cells.slice(cellIdx + 1)
+        ],
+        activeIds: activeStaff,
+        staffMap
+      },
+      ...boards.slice(boardIdx + 1)
+    ];
   }
 };
 
 const addPersonBoardHandler = () => {
   const departmentName = boards[activeBoardIdx].name;
   const departmentStaff = people.filter(p => p.department == departmentName);
-  const activeStaff = boards[activeBoardIdx].activeIds;
+  let activeStaff = boards[activeBoardIdx].activeIds;
 
   let person;
 
@@ -181,7 +193,7 @@ const addPersonBoardHandler = () => {
   }
 
   if (person) {
-    addPerson(departmentName, person.id);
+    addPerson(`${departmentName}-active-active`, person.id);
   } else {
     return;
   }
@@ -195,6 +207,8 @@ const addPersonBoardHandler = () => {
 
     socket.send(JSON.stringify(eventObj));
   }
+
+  renderBoardStaff();
 };
 
 const selectPersonHandler = ({ currentTarget }) => {
@@ -249,20 +263,18 @@ const movePerson = (moveFrom, moveTo, personId) => {
     },
     ...boards.slice(boardIdx + 1)
   ];
-
-  renderActiveBoard();
 };
 
 const movePersonBoardHandler = (event, cell) => {
   if (activePersonId) {
-    const tmpPersonId = activePersonId;
-
     const { cellSlug } = cell.dataset;
 
     const currentPersonLocation =
       boards[activeBoardIdx].staffMap[`id${activePersonId}`];
 
     const sameCell = cellSlug == currentPersonLocation;
+
+    const isInternal = !cellSlug.includes('-support-');
 
     if (!sameCell) {
       movePerson(currentPersonLocation, cellSlug, activePersonId);
@@ -272,13 +284,14 @@ const movePersonBoardHandler = (event, cell) => {
           type: 'personMove',
           source: currentPersonLocation,
           target: cellSlug,
-          personId: tmpPersonId
+          personId: activePersonId,
+          isInternal
         };
 
         socket.send(JSON.stringify(eventObj));
       }
 
-      activePersonId = null;
+      renderActiveBoard();
     }
   }
 };
@@ -288,13 +301,32 @@ const delegateRelayEvent = e => {
     case 'personAdd': {
       const { personId, target } = e;
       const departmentName = target.split('-')[0];
-      addPerson(departmentName, personId);
+      addPerson(target, personId);
+
+      if (
+        activeBoardIdx != null &&
+        departmentName == boards[activeBoardIdx].name
+      ) {
+        renderBoardStaff();
+      }
 
       break;
     }
     case 'personMove': {
-      const { personId, source, target } = e;
+      const { personId, source, target, isInternal } = e;
+      const supportDepartment = target.split('-')[2];
       movePerson(source, target, personId);
+
+      if (!isInternal) {
+        addPerson(`${supportDepartment}-active-active`, personId);
+      }
+
+      if (
+        activeBoardIdx != null &&
+        supportDepartment == boards[activeBoardIdx].name
+      ) {
+        renderActiveBoard();
+      }
 
       break;
     }
