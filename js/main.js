@@ -94,7 +94,7 @@ const renderActiveBoard = () => {
 
     document
       .getElementById('add-person')
-      .addEventListener('click', addPersonHandler);
+      .addEventListener('click', addPersonBoardHandler);
 
     // render active staff
     renderBoardStaff();
@@ -122,10 +122,52 @@ const closeBoardHandler = () => {
   renderActiveBoard();
 };
 
-const addPersonHandler = () => {
-  const departmentStaff = people.filter(
-    p => p.department == boards[activeBoardIdx].name
-  );
+const addPerson = (department, personId) => {
+  const boardIdx = boards.findIndex(({ name }) => name == department);
+  const activeStaff = boards[boardIdx].activeIds;
+
+  if (!activeStaff.includes(personId)) {
+    const person = people.find(({ id }) => id == personId);
+
+    if (person) {
+      const cellIdx = boards[boardIdx].cells.findIndex(c => c.name == 'active');
+
+      activeStaff.push(personId);
+
+      const staffMap = {
+        ...boards[boardIdx].staffMap
+      };
+
+      const cellSlug = `${department}-active-active`;
+
+      staffMap[`id${personId}`] = cellSlug;
+
+      boards = [
+        ...boards.slice(0, boardIdx),
+        {
+          ...boards[boardIdx],
+          cells: [
+            ...boards[boardIdx].cells.slice(0, cellIdx),
+            {
+              ...boards[boardIdx].cells[cellIdx],
+              staff: [...boards[boardIdx].cells[cellIdx].staff, person]
+            },
+            ...boards[boardIdx].cells.slice(cellIdx + 1)
+          ],
+          activeStaff,
+          staffMap
+        },
+        ...boards.slice(boardIdx + 1)
+      ];
+
+      renderBoardStaff();
+    }
+  }
+};
+
+const addPersonBoardHandler = () => {
+  const departmentName = boards[activeBoardIdx].name;
+  const departmentStaff = people.filter(p => p.department == departmentName);
   const activeStaff = boards[activeBoardIdx].activeIds;
 
   let person;
@@ -133,43 +175,27 @@ const addPersonHandler = () => {
   for (let i = 0; i < departmentStaff.length; i++) {
     if (!activeStaff.includes(departmentStaff[i].id)) {
       person = departmentStaff[i];
-      activeStaff.push(departmentStaff[i].id);
       break;
     }
   }
 
-  if (!person) return;
+  if (person) {
+    addPerson(departmentName, person.id);
+  } else {
+    return;
+  }
 
-  const boardIdx = boards.findIndex(b => b.name == boards[activeBoardIdx].name);
-  const cellIdx = boards[boardIdx].cells.findIndex(c => c.name == 'active');
+  // activeBoardIdx = boardIdx;
 
-  const staffMap = {
-    ...boards[boardIdx].staffMap
-  };
+  if (socket && socket.readyState == WebSocket.OPEN) {
+    const eventObj = {
+      type: 'personAdd',
+      personId: person.id,
+      target: `${departmentName}-active-active`
+    };
 
-  staffMap[`id${person.id}`] = `${boards[activeBoardIdx].name}-active-active`;
-
-  boards = [
-    ...boards.slice(0, boardIdx),
-    {
-      ...boards[boardIdx],
-      cells: [
-        ...boards[boardIdx].cells.slice(0, cellIdx),
-        {
-          ...boards[boardIdx].cells[cellIdx],
-          staff: [...boards[boardIdx].cells[cellIdx].staff, person]
-        },
-        ...boards[boardIdx].cells.slice(cellIdx + 1)
-      ],
-      activeStaff,
-      staffMap
-    },
-    ...boards.slice(boardIdx + 1)
-  ];
-
-  activeBoardIdx = boardIdx;
-
-  renderBoardStaff();
+    socket.send(JSON.stringify(eventObj));
+  }
 };
 
 const selectPersonHandler = ({ currentTarget }) => {
@@ -237,10 +263,68 @@ const moveEventHandler = (event, cell) => {
       activePersonId = null;
 
       renderActiveBoard();
+
+      // if (socket && socket.readyState == WebSocket.OPEN) {
+      //   const eventObj = {
+      //     type: 'personMove',
+      //     source: currentPersonLocation,
+      //     target: cellSlug,
+      //     isInternal
+      //   };
+
+      //   console.log(eventObj);
+
+      //   socket.send('data');
+      // }
     }
   }
 };
 
+const delegateRelayEvent = e => {
+  switch (e.type) {
+    case 'personAdd':
+      const { personId, target } = e;
+      const departmentName = target.split('-')[0];
+      addPerson(departmentName, personId);
+
+      break;
+    case 'personMove':
+      console.log(e);
+      break;
+  }
+};
+
+const connectToRelay = () => {
+  let socket;
+
+  try {
+    socket = new WebSocket('ws://localhost:8080/boards');
+  } catch {
+    return null;
+  }
+
+  socket.addEventListener('open', () => {
+    console.log('Socket connected');
+  });
+
+  socket.addEventListener('error', err => {
+    console.log(err);
+  });
+
+  socket.addEventListener('close', () => {
+    console.log('Socket disconnected');
+  });
+
+  socket.addEventListener('message', e => {
+    const eventObj = JSON.parse(e.data);
+    delegateRelayEvent(eventObj);
+  });
+
+  return socket;
+};
+
 (() => {
   renderBoardCards();
+
+  socket = connectToRelay();
 })();

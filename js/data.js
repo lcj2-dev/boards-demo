@@ -78,3 +78,5 @@ const people = [
   { id: 19, name: 'Stephen', surname: 'Strand', department: 'dock' },
   { id: 20, name: 'Nancy', surname: 'Rodriquez', department: 'dock' }
 ];
+
+let socket;
