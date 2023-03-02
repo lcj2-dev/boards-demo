@@ -71,8 +71,6 @@ const renderBoardStaff = () => {
 const renderActiveBoard = () => {
   const boardWrapper = document.getElementById('active-board-wrapper');
 
-  activePersonId = null;
-
   if (activeBoardIdx == null) {
     boardWrapper.innerHTML = '';
   } else {
@@ -143,6 +141,10 @@ const addPerson = (addTo, personId) => {
 
   let activeStaff = boards[boardIdx].activeIds;
 
+  if (activeStaff.includes(personId)) {
+    return;
+  }
+
   const person = people.find(({ id }) => id == personId);
 
   if (person) {
@@ -208,6 +210,7 @@ const addPersonBoardHandler = () => {
     socket.send(JSON.stringify(eventObj));
   }
 
+  activePersonId = null;
   renderBoardStaff();
 };
 
@@ -273,11 +276,23 @@ const movePersonBoardHandler = (event, cell) => {
       boards[activeBoardIdx].staffMap[`id${activePersonId}`];
 
     const sameCell = cellSlug == currentPersonLocation;
+    const toVoid = cellSlug.includes('void');
 
-    const isInternal = !cellSlug.includes('-support-');
+    const toSupport = cellSlug.includes('-support-');
+    const fromSupport = currentPersonLocation.includes('-support-');
 
-    if (!sameCell) {
+    if (!sameCell && !toVoid) {
       movePerson(currentPersonLocation, cellSlug, activePersonId);
+
+      if (toSupport) {
+        const targetDepartment = cellSlug.split('-')[2];
+        addPerson(`${targetDepartment}-active-active`, activePersonId);
+      }
+
+      if (fromSupport) {
+        const sourceDepartment = currentPersonLocation.split('-')[2];
+        removePerson(sourceDepartment, activePersonId);
+      }
 
       if (socket && socket.readyState == WebSocket.OPEN) {
         const eventObj = {
@@ -285,15 +300,55 @@ const movePersonBoardHandler = (event, cell) => {
           source: currentPersonLocation,
           target: cellSlug,
           personId: activePersonId,
-          isInternal
+          toSupport,
+          fromSupport
         };
 
         socket.send(JSON.stringify(eventObj));
       }
 
+      activePersonId = null;
       renderActiveBoard();
     }
   }
+};
+
+const removePerson = (removeFrom, personId) => {
+  const boardIdx = boards.findIndex(({ name }) => name == removeFrom);
+
+  if (!boards[boardIdx].activeIds.includes(personId)) {
+    return;
+  }
+
+  const [cellDepartment, cellClassification, cellName] =
+    boards[boardIdx].staffMap[`id${personId}`].split('-');
+
+  const cellIdx = boards[boardIdx].cells.findIndex(
+    ({ classification, name }) =>
+      cellClassification == classification && cellName == name
+  );
+
+  const activeIds = boards[boardIdx].activeIds.filter(id => id != personId);
+  delete boards[boardIdx].staffMap[`id${personId}`];
+
+  boards = [
+    ...boards.slice(0, boardIdx),
+    {
+      ...boards[boardIdx],
+      cells: [
+        ...boards[boardIdx].cells.slice(0, cellIdx),
+        {
+          ...boards[boardIdx].cells[cellIdx],
+          staff: boards[boardIdx].cells[cellIdx].staff.filter(
+            ({ id }) => id != personId
+          )
+        },
+        ...boards[boardIdx].cells.slice(cellIdx + 1)
+      ],
+      activeIds
+    },
+    ...boards.slice(boardIdx + 1)
+  ];
 };
 
 const delegateRelayEvent = e => {
@@ -313,18 +368,20 @@ const delegateRelayEvent = e => {
       break;
     }
     case 'personMove': {
-      const { personId, source, target, isInternal } = e;
-      const supportDepartment = target.split('-')[2];
+      const { personId, source, target, toSupport, fromSupport } = e;
       movePerson(source, target, personId);
 
-      if (!isInternal) {
-        addPerson(`${supportDepartment}-active-active`, personId);
+      if (toSupport) {
+        const targetDepartment = target.split('-')[2];
+        addPerson(`${targetDepartment}-active-active`, personId);
       }
 
-      if (
-        activeBoardIdx != null &&
-        supportDepartment == boards[activeBoardIdx].name
-      ) {
+      if (fromSupport) {
+        const sourceDepartment = source.split('-')[2];
+        removePerson(sourceDepartment, personId);
+      }
+
+      if (activeBoardIdx != null) {
         renderActiveBoard();
       }
 
