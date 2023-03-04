@@ -1,7 +1,7 @@
 let boards = [
   {
     name: 'stow',
-    support: 'void',
+    support: 'dock',
     activeIds: [],
     staffMap: {},
     cells: [
@@ -12,7 +12,7 @@ let boards = [
         elSelector: 'main-board-content'
       },
       {
-        name: 'void',
+        name: 'dock',
         classification: 'support',
         staff: [],
         elSelector: 'support-board-content'
