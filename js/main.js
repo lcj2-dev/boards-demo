@@ -394,6 +394,7 @@ const connectToRelay = () => {
   let socket;
 
   try {
+    // Change relay server URL
     socket = new WebSocket('ws://localhost:8080/boards');
   } catch {
     return null;
